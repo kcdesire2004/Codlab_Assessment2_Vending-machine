@@ -1,0 +1,3 @@
+The task was to design and implement a console-based vending machine in C++ that demonstrates programming knowledge and incorporates the core techniques taught in this module. The vending machine displays a menu of drinks and snacks, allows users to insert money, select items using numeric codes, and receive both the product and any correct change.
+
+My implementation also includes additional features such as categories (Cold Drinks, Hot Drinks, Snacks), stock tracking (items can run out), error checking for invalid inputs, the ability to purchase multiple items in a single session, and a basic intelligent suggestion system.
