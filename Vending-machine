@@ -1,0 +1,155 @@
+#include <iostream>
+#include <vector>
+#include <limits>
+#include <cmath>    // for round
+using namespace std;
+
+// -------- Helpers --------
+string moneyStr(int pence) {
+    // Convert pennies to "£x.yy"
+    int pounds = pence / 100;
+    int p = pence % 100;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "£%d.%02d", pounds, p);
+    return string(buf);
+}
+
+int toPence(double pounds) {
+    // Safely convert user £ input to integer pennies
+    return static_cast<int>(round(pounds * 100.0));
+}
+
+// -------- Data Model --------
+struct Item {
+    int code;            // user enters this code to buy
+    string name;         // display name
+    string category;     // e.g., "Hot Drink", "Snack"
+    int pricePence;      // price in pennies
+    int stock;           // simple stock count
+};
+
+// Find item by code (returns index or -1 if not found)
+int findItem(const vector<Item>& items, int code) {
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i].code == code) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+// Very lightweight suggestion: if you buy a Hot Drink, suggest Biscuits
+void suggest(const Item& bought, const vector<Item>& items) {
+    if (bought.category == "Hot Drink") {
+        for (const auto& it : items) {
+            if (it.name == "Biscuits" && it.stock > 0) {
+                cout << "💡 Suggestion: Fancy some " << it.name
+                     << " (" << moneyStr(it.pricePence) << ") with your "
+                     << bought.name << "?\n";
+                return;
+            }
+        }
+    }
+}
+
+// Basic input guard for numbers
+template<typename T>
+bool readNumber(T& out) {
+    if (cin >> out) return true;
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return false;
+}
+
+int main() {
+    // ----- Setup inventory -----
+    vector<Item> items = {
+        {11, "Coke",     "Cold Drink", 120, 5},
+        {12, "Water",    "Cold Drink",  90, 5},
+        {21, "Coffee",   "Hot Drink",  150, 5},
+        {22, "Tea",      "Hot Drink",  130, 5},
+        {31, "Biscuits", "Snack",      100, 5},
+        {32, "Crisps",   "Snack",      110, 5}
+    };
+
+    cout << "=== Simple Vending Machine ===\n";
+    cout << "Codes are shown next to items. Example: 21 for Coffee.\n\n";
+
+    // ----- User inserts money (any amount) -----
+    cout << "Insert money (e.g., 2 or 2.50): £";
+    double inserted = 0.0;
+    while (!readNumber(inserted) || inserted < 0.0) {
+        cout << "Please enter a valid non-negative amount: £";
+    }
+    int balance = toPence(inserted);
+    cout << "Balance: " << moneyStr(balance) << "\n\n";
+
+    bool shopping = true;
+    while (shopping) {
+        // ----- Show menu -----
+        cout << "------ MENU ------\n";
+        cout << "Code  Item        Category     Price   Stock\n";
+        for (const auto& it : items) {
+            cout << it.code << "    "
+                 << it.name << string(max(1, 12 - (int)it.name.size()), ' ')
+                 << it.category << string(max(1, 12 - (int)it.category.size()), ' ')
+                 << moneyStr(it.pricePence) << "   "
+                 << it.stock << "\n";
+        }
+        cout << "------------------\n";
+        cout << "Balance: " << moneyStr(balance) << "\n";
+        cout << "Enter item code to buy, or 0 to finish: ";
+
+        int code;
+        if (!readNumber(code)) {
+            cout << "Invalid input. Try again.\n";
+            continue;
+        }
+        if (code == 0) break;
+
+        // ----- Find item by code -----
+        int idx = findItem(items, code);
+        if (idx == -1) {
+            cout << "No item with code " << code << ". Please try again.\n\n";
+            continue;
+        }
+        Item& chosen = items[idx];
+
+        // ----- Check stock -----
+        if (chosen.stock <= 0) {
+            cout << "Sorry, " << chosen.name << " is out of stock.\n\n";
+            continue;
+        }
+
+        // ----- Check funds -----
+        if (balance < chosen.pricePence) {
+            int needed = chosen.pricePence - balance;
+            cout << "Not enough funds. " << chosen.name << " costs "
+                 << moneyStr(chosen.pricePence) << ". You need "
+                 << moneyStr(needed) << " more.\n\n";
+            continue;
+        }
+
+        // ----- Dispense -----
+        chosen.stock--;
+        balance -= chosen.pricePence;
+        cout << "Dispensing " << chosen.name << "… Enjoy!\n";
+        cout << "Remaining balance: " << moneyStr(balance) << "\n";
+        suggest(chosen, items);          // simple suggestion (optional)
+        cout << "\n";
+
+        // ----- Offer another purchase -----
+        cout << "Buy another item? (1 = yes, 0 = no): ";
+        int again = 0;
+        if (!readNumber(again) || (again != 0 && again != 1)) {
+            cout << "Okay, finishing up.\n";
+            shopping = false;
+        } else {
+            shopping = (again == 1);
+        }
+        cout << "\n";
+    }
+
+    // ----- Return change -----
+    cout << "Returning change: " << moneyStr(balance) << "\n";
+    cout << "Thank you for using the vending machine!\n";
+    return 0;
+}
